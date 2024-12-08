@@ -1,0 +1,119 @@
+# https://taskfile.dev
+---
+version: '3'
+
+
+vars:
+  vault_addr:
+    sh: cat ~/.vault-addr
+  vault_token:
+    sh: cat ~/.vault-root-token
+  vault_kubeconfig:
+    sh: cat ~/.vault-kubeconfig
+  env_secrets_file: "{{ .USER_WORKING_DIR }}/.secrets.sh"
+
+env:
+  KUBECONFIG: '{{ .vault_kubeconfig }}'
+  VAULT_ADDR: '{{ .vault_addr }}'
+  VAULT_FORMAT: json
+  VAULT_TOKEN: '{{ .vault_token }}'
+
+
+# vars:
+#   set_config: |
+#     export namespace=${TF_VAR_client_test_kubernetes_namespace}
+#     export KUBECONFIG=${CLIENT_KUBECONFIG} 
+
+tasks:
+  clear:
+    internal: true
+    cmds: [clear]
+  clean:
+    cmds: [rm -rf .terraform* planfile terraform.tfstate* out.json jit.auto.tfvars]
+  tf_init:
+    internal: true
+    deps: [clear]
+    cmds: [terraform init]
+  tf_plan:
+    deps: [tf_init]
+    cmds:
+      - |
+        # run terraform plan
+        terraform plan -out=planfile
+  tf_apply:
+    cmds:
+      - task: tf_plan
+      - terraform apply "planfile"
+  tf_destroy:
+    deps: [clear]
+    cmds:
+      - terraform destroy -auto-approve
+      - task: clean
+  default:
+    deps: [tf_plan]
+  status:
+    cmds:
+      - vault status -format=json | jq
+  # auth_apply:
+  #   cmds:
+  #     - |
+  #       {{ .set_config }}
+        
+  #       set -x
+  #       helm upgrade -i \
+  #         -n ${namespace} \
+  #         --create-namespace \
+  #         auth-shared-secrets \
+  #         ./charts/vault.auth
+
+  #       # setup vault auth
+  #       api_server=$(yq -r '.clusters[0].cluster.server' ${KUBECONFIG})
+  #       ca_certificate_file=/tmp/ca.crt
+  #       yq -r '.clusters[0].cluster["certificate-authority-data"]' ${KUBECONFIG} | base64 -d > ${ca_certificate_file}
+  #       service_account=$(yq -r '.service_account_name' ./charts/vault.auth/values.yaml)
+  #       token_review_jwt=$(kubectl get secret ${service_account} -n ${namespace} -o go-template='{{`{{.data.token }}`}}' | base64 -d)
+  #       export VAULT_NAMESPACE=client
+  #       # setup auth
+  #       vault write auth/kubernetes/client_cluster/config \
+  #         kubernetes_host="${api_server}" \
+  #         token_reviewer_jwt="${token_review_jwt}" \
+  #         kubernetes_ca_cert="@${ca_certificate_file}" \
+  #         disable_iss_validation=true
+        
+  #       # setup kubernetes engine
+  #       vault write kubernetes/client_cluster/config \
+  #         kubernetes_host="${api_server}" \
+  #         kubernetes_ca_cert="@${ca_certificate_file}" \
+  #         service_account_jwt="${token_review_jwt}" \
+  #         disable_local_ca_jwt=true
+  # auth_destroy:
+  #   cmds:
+  #     - |
+  #       {{ .set_config }}
+        
+  #       set -x
+  #       helm delete \
+  #         -n ${namespace} \
+  #         auth-shared-secrets
+  # tests_apply:
+  #   cmds:
+  #     - |
+  #       {{ .set_config }}
+
+  #       set -x
+  #       helm upgrade -i \
+  #         -n ${namespace} \
+  #         --create-namespace \
+  #         --set vault.address=${VAULT_ADDR} \
+  #         --set image=${IMAGE} \
+  #         tests \
+  #         ./charts/testbed
+  # tests_destroy:
+  #   cmds:
+  #     - |
+  #       {{ .set_config }}
+
+  #       set -x
+  #       helm delete \
+  #         -n ${namespace} \
+  #         tests

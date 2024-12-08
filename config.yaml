@@ -1,0 +1,7 @@
+auth:
+  kubernetes:
+    name: dev
+  approle:
+    name: approle
+  cert:
+    name: cert
