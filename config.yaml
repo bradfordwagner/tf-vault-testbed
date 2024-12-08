@@ -5,3 +5,8 @@ auth:
     name: approle
   cert:
     name: cert
+  userpass:
+    name: userpass
+    users:
+      - name: admin
+        password: admin

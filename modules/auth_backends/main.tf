@@ -28,4 +28,16 @@ resource "vault_auth_backend" "cert" {
     default_lease_ttl = "60s" # uses golang duration string
   }
 }
+
+resource "vault_auth_backend" "userpass" {
+  type      = "userpass"
+  path      = var.config.auth.userpass.name
+  tune {
+    default_lease_ttl = "60s" # uses golang duration string
+  }
+}
+################################################################
+
+## userpass ####################################################
+
 ################################################################
