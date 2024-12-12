@@ -5,7 +5,17 @@ locals {
 }
 
 module "policies" {
- source = "./modules/policies"
+  source = "./modules/policies"
+  config = local.config
+}
+
+module "entities" {
+  source = "./modules/entities"
+  config = local.config
+}
+
+module "groups" {
+  source = "./modules/groups"
   config = local.config
 }
 

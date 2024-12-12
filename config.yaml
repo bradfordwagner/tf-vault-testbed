@@ -10,3 +10,15 @@ auth:
     users:
       - name: admin
         password: admin
+
+entities:
+  bob:
+    policies:
+      - default
+    metadata:
+      email: bob@barker.com
+  sir:
+    policies:
+      - default
+    metadata:
+      email: sir@smokesalot.com
