@@ -1,43 +1,25 @@
-## vars ########################################################
-variable "config" {
-  type = any
-}
-################################################################
-
-## auth endpoints ##############################################
-resource "vault_auth_backend" "kubernetes" {
-  type = "kubernetes"
-  path = "kubernetes/${var.config.auth.kubernetes.name}"
-  tune {
-    default_lease_ttl = "60s" # uses golang duration string
-  }
-}
-
-resource "vault_auth_backend" "approle" {
-  type = "approle"
-  path = var.config.auth.approle.name
-  tune {
-    default_lease_ttl = "60s" # uses golang duration string
-  }
-}
-
-resource "vault_auth_backend" "cert" {
-  type = "cert"
-  path = var.config.auth.cert.name
-  tune {
-    default_lease_ttl = "60s" # uses golang duration string
-  }
-}
-
 resource "vault_auth_backend" "userpass" {
+  path = "userpass"
   type = "userpass"
-  path = var.config.auth.userpass.name
+}
+
+
+# create kube auth backend
+resource "vault_auth_backend" "kubernetes_auth_endpoint" {
+  type      = "kubernetes"
+  path      = var.config.kubernetes.cluster.auth_endpoint
   tune {
-    default_lease_ttl = "60s" # uses golang duration string
+    default_lease_ttl = var.config.kubernetes.cluster.default_lease_ttl
   }
 }
-################################################################
 
-## userpass ####################################################
+resource "vault_kubernetes_auth_backend_role" "smoke_test" {
+  for_each = var.config.kubernetes.roles
+  role_name                        = each.key
+  backend                          = vault_auth_backend.kubernetes_auth_endpoint.path
+  bound_service_account_names      = each.value.kubernetes.service_account_names
+  bound_service_account_namespaces = each.value.kubernetes.namespaces
+  token_policies = each.value.token_policies
+  alias_name_source = "serviceaccount_name"
+}
 
-################################################################
