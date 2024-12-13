@@ -31,7 +31,7 @@ groups:
 
 kubernetes:
   cluster:
-    auth_endpoint: kubernetes/client_cluster
+    auth_endpoint: kubernetes
     default_lease_ttl: 60s
   roles:
     argo_oidc_client:
