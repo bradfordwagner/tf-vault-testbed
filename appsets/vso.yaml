@@ -1,0 +1,43 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: vso
+spec:
+  goTemplate: true
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            argocd.argoproj.io/secret-type: cluster
+  template:
+    metadata:
+      name: 'vso-{{ .name }}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/hashicorp/vault-secrets-operator.git
+        targetRevision: v0.9.1
+        path: ./chart
+        helm:
+          releaseName: vso
+          values: |
+            fullnameOverride: vso
+
+            defaultVaultConnection:
+              enabled: true
+              address: https://vault-ui.vault.svc
+              skipTLSVerify: true
+              # CACertSecret is the name of a Kubernetes secret containing the trusted PEM encoded CA certificate chain as `ca.crt`.
+              # Note: This secret must exist prior to deploying the CR.
+              # @type: string
+              caCertSecret: ""
+      destination:
+        server: '{{ .server }}'
+        namespace: vault
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - Validate=true

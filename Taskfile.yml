@@ -11,6 +11,7 @@ vars:
   vault_kubeconfig:
     sh: cat ~/.vault-kubeconfig
   env_secrets_file: "{{ .USER_WORKING_DIR }}/.secrets.sh"
+  argocd_namespace: akp-gitops
 
 env:
   KUBECONFIG: '{{ .vault_kubeconfig }}'
@@ -54,6 +55,18 @@ tasks:
   status:
     cmds:
       - vault status -format=json | jq
+
+  apply_appsets:
+    cmds:
+      - |
+        set -x
+        kubectl apply -n {{ .argocd_namespace }} -f ./appsets/vso.yaml
+  delete_appsets:
+    cmds:
+      - |
+        set -x
+        kubectl delete -n {{ .argocd_namespace }} -f ./appsets/vso.yaml
+
   # auth_apply:
   #   cmds:
   #     - |
