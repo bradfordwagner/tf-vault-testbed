@@ -1,0 +1,45 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: vault-webhook-injector
+spec:
+  goTemplate: true
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            argocd.argoproj.io/secret-type: cluster
+  template:
+    metadata:
+      name: 'vault-webhook-injector-{{ .name }}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/hashicorp/vault-helm.git
+        targetRevision: v0.29.1
+        path: .
+        helm:
+          releaseName: vault-webhook-injector
+          values: |
+            fullnameOverride: vmwh
+            server:
+              enabled: false
+            injector:
+              enabled: true
+              authPath: auth/kubernetes
+      destination:
+        server: '{{ .server }}'
+        namespace: vault
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - Validate=true
+          - RespectIgnoreDifferences=true
+      ignoreDifferences:
+          - group: '*'
+            kind: MutatingWebhookConfiguration
+            jqPathExpressions:
+              - '.webhooks[]?.clientConfig.caBundle'

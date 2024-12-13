@@ -61,11 +61,13 @@ tasks:
       - |
         set -x
         kubectl apply -n {{ .argocd_namespace }} -f ./appsets/vso.yaml
+        kubectl apply -n {{ .argocd_namespace }} -f ./appsets/vault_webhook_injector.yaml
   delete_appsets:
     cmds:
       - |
         set -x
         kubectl delete -n {{ .argocd_namespace }} -f ./appsets/vso.yaml
+        kubectl delete -n {{ .argocd_namespace }} -f ./appsets/vault_webhook_injector.yaml
 
   # auth_apply:
   #   cmds:
