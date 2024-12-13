@@ -33,3 +33,8 @@ module "groups" {
   config            = local.config
   entity_name_to_id = module.entities.entity_name_to_id
 }
+
+module "kubernetes_secrets_backend" {
+  source = "./modules/kubernetes_secrets_backend"
+  config = local.config
+}

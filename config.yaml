@@ -42,3 +42,19 @@ kubernetes:
           - argo-workflows
       token_policies:
         - argo_workflows_oidc_client
+
+secrets:
+  kubernetes:
+    default_lease_ttl_seconds: 60
+    max_lease_ttl_seconds: 120
+    roles:
+      list-pods:
+        allowed_kubernetes_namespaces: ["*"]
+        kubernetes_role_type: ClusterRole
+        token_max_ttl: 600     # 10 minutes
+        token_default_ttl: 600 # 10 minutes
+        generated_role_rules: |
+          rules:
+          - apiGroups: ["*"]
+            resources: [namespaces, pods]
+            verbs: [get,list]
