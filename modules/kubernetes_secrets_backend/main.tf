@@ -15,7 +15,7 @@ resource "vault_mount" "kubernetes_backends" {
 }
 
 
-resource "vault_kubernetes_secret_backend_role" "list_namespaces" {
+resource "vault_kubernetes_secret_backend_role" "roles" {
   for_each = var.config.secrets.kubernetes.roles
   backend  = vault_mount.kubernetes_backends.id
   # follows a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
