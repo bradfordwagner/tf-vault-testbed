@@ -100,3 +100,15 @@ tasks:
           kubernetes_ca_cert="@${ca_certificate_file}" \
           service_account_jwt="${token_review_jwt}" \
           disable_local_ca_jwt=true
+
+  token_lease:
+    vars:
+      type: '{{ .type | default "batch" }}'
+      orphan: '{{ .orphan | default true }}'
+    cmds:
+      - |
+          # if orphan is true set orphan variable to "-orphan"
+          if [[ "{{ .orphan }}" == "true" ]]; then
+            orphan="-orphan"
+          fi
+          vault token create -policy="list_pods" ${orphan} -type={{ .type }} | jq

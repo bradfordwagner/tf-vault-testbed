@@ -16,3 +16,13 @@ path "identity/oidc/client/argo-workflows" {
 }
 EOT
 }
+
+# list_pods policy
+resource "vault_policy" "list_pods" {
+  name   = "list_pods"
+  policy = <<EOT
+path "kubernetes/creds/list_pods" {
+  capabilities = ["update"]
+}
+EOT
+}
