@@ -16,6 +16,7 @@ vars:
     export namespace={{ .vault_k8s_namespace }}
     export KUBECONFIG={{ .vault_kubeconfig }}
   argocd_namespace: akp-gitops
+  tmp_token_file: /tmp/vault_token
 
 env:
   KUBECONFIG: '{{ .vault_kubeconfig }}'
@@ -107,8 +108,11 @@ tasks:
       orphan: '{{ .orphan | default false | ternary "-orphan" "" }}'
     cmds:
       - |
-          vault token create \
+          res=$(vault token create \
             -policy="list_pods" \
             {{ .orphan }} \
-            -type={{ .type }} \
-            | jq
+            -type={{ .type }}
+          )
+          echo ${res} | jq
+          echo ${res} | jq '.auth.client_token' -r > {{ .tmp_token_file }}
+          bat -P {{ .tmp_token_file }}
