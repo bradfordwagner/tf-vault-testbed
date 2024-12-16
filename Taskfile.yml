@@ -100,35 +100,3 @@ tasks:
           kubernetes_ca_cert="@${ca_certificate_file}" \
           service_account_jwt="${token_review_jwt}" \
           disable_local_ca_jwt=true
-
-  # auth_destroy:
-  #   cmds:
-  #     - |
-  #       {{ .set_config }}
-        
-  #       set -x
-  #       helm delete \
-  #         -n ${namespace} \
-  #         auth-shared-secrets
-  # tests_apply:
-  #   cmds:
-  #     - |
-  #       {{ .set_config }}
-
-  #       set -x
-  #       helm upgrade -i \
-  #         -n ${namespace} \
-  #         --create-namespace \
-  #         --set vault.address=${VAULT_ADDR} \
-  #         --set image=${IMAGE} \
-  #         tests \
-  #         ./charts/testbed
-  # tests_destroy:
-  #   cmds:
-  #     - |
-  #       {{ .set_config }}
-
-  #       set -x
-  #       helm delete \
-  #         -n ${namespace} \
-  #         tests
