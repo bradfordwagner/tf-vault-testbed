@@ -11,6 +11,10 @@ vars:
   vault_kubeconfig:
     sh: cat ~/.vault-kubeconfig
   env_secrets_file: "{{ .USER_WORKING_DIR }}/.secrets.sh"
+  vault_k8s_namespace: vault
+  set_config: |
+    export namespace={{ .vault_k8s_namespace }}
+    export KUBECONFIG={{ .vault_kubeconfig }}
   argocd_namespace: akp-gitops
 
 env:
@@ -21,9 +25,6 @@ env:
 
 
 # vars:
-#   set_config: |
-#     export namespace=${TF_VAR_client_test_kubernetes_namespace}
-#     export KUBECONFIG=${CLIENT_KUBECONFIG} 
 
 tasks:
   clear:
@@ -62,45 +63,44 @@ tasks:
         set -x
         kubectl apply -n {{ .argocd_namespace }} -f ./appsets/vso.yaml
         kubectl apply -n {{ .argocd_namespace }} -f ./appsets/vault_webhook_injector.yaml
+        kubectl apply -n {{ .argocd_namespace }} -f ./appsets/vault_auth.yaml
   delete_appsets:
     cmds:
       - |
         set -x
         kubectl delete -n {{ .argocd_namespace }} -f ./appsets/vso.yaml
         kubectl delete -n {{ .argocd_namespace }} -f ./appsets/vault_webhook_injector.yaml
+        kubectl delete -n {{ .argocd_namespace }} -f ./appsets/vault_auth.yaml
 
-  # auth_apply:
-  #   cmds:
-  #     - |
-  #       {{ .set_config }}
-        
-  #       set -x
-  #       helm upgrade -i \
-  #         -n ${namespace} \
-  #         --create-namespace \
-  #         auth-shared-secrets \
-  #         ./charts/vault.auth
+  auth_apply:
+    cmds:
+      - |
+        {{ .set_config }}
+        set -x
 
-  #       # setup vault auth
-  #       api_server=$(yq -r '.clusters[0].cluster.server' ${KUBECONFIG})
-  #       ca_certificate_file=/tmp/ca.crt
-  #       yq -r '.clusters[0].cluster["certificate-authority-data"]' ${KUBECONFIG} | base64 -d > ${ca_certificate_file}
-  #       service_account=$(yq -r '.service_account_name' ./charts/vault.auth/values.yaml)
-  #       token_review_jwt=$(kubectl get secret ${service_account} -n ${namespace} -o go-template='{{`{{.data.token }}`}}' | base64 -d)
-  #       export VAULT_NAMESPACE=client
-  #       # setup auth
-  #       vault write auth/kubernetes/client_cluster/config \
-  #         kubernetes_host="${api_server}" \
-  #         token_reviewer_jwt="${token_review_jwt}" \
-  #         kubernetes_ca_cert="@${ca_certificate_file}" \
-  #         disable_iss_validation=true
-        
-  #       # setup kubernetes engine
-  #       vault write kubernetes/client_cluster/config \
-  #         kubernetes_host="${api_server}" \
-  #         kubernetes_ca_cert="@${ca_certificate_file}" \
-  #         service_account_jwt="${token_review_jwt}" \
-  #         disable_local_ca_jwt=true
+        # setup vault auth
+        api_server=https://kubernetes.default.svc.cluster.local # api_server=$(yq -r '.clusters[0].cluster.server' ${KUBECONFIG})
+        ca_certificate_file=/tmp/ca.crt
+        yq -r '.clusters[0].cluster["certificate-authority-data"]' ${KUBECONFIG} | base64 -d > ${ca_certificate_file}
+
+        service_account=vault-auth
+        token_review_jwt=$(kubectl get secret ${service_account} -n ${namespace} -o go-template='{{`{{.data.token }}`}}' | base64 -d)
+        # setup auth
+        vault write auth/kubernetes/config \
+          kubernetes_host="${api_server}" \
+          token_reviewer_jwt="${token_review_jwt}" \
+          kubernetes_ca_cert="@${ca_certificate_file}" \
+          disable_iss_validation=true
+
+        # setup kubernetes engine
+        service_account=vault-secrets
+        token_review_jwt=$(kubectl get secret ${service_account} -n ${namespace} -o go-template='{{`{{.data.token }}`}}' | base64 -d)
+        vault write kubernetes/config \
+          kubernetes_host="${api_server}" \
+          kubernetes_ca_cert="@${ca_certificate_file}" \
+          service_account_jwt="${token_review_jwt}" \
+          disable_local_ca_jwt=true
+
   # auth_destroy:
   #   cmds:
   #     - |

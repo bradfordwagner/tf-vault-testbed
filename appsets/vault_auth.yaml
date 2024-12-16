@@ -1,0 +1,35 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: vault-auth
+spec:
+  goTemplate: true
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            argocd.argoproj.io/secret-type: cluster
+  template:
+    metadata:
+      name: 'vault-auth-{{ .name }}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/bradfordwagner/chart-vault-kubernetes-sa.git
+        targetRevision: feature/init
+        path: ./
+        helm:
+          releaseName: vault-auth
+          values: |
+            auth_sa: vault-auth
+            secrets_sa: vault-secrets
+      destination:
+        server: '{{ .server }}'
+        namespace: vault
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - Validate=true
