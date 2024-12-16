@@ -83,9 +83,9 @@ tasks:
         ca_certificate_file=/tmp/ca.crt
         yq -r '.clusters[0].cluster["certificate-authority-data"]' ${KUBECONFIG} | base64 -d > ${ca_certificate_file}
 
+        # setup auth
         service_account=vault-auth
         token_review_jwt=$(kubectl get secret ${service_account} -n ${namespace} -o go-template='{{`{{.data.token }}`}}' | base64 -d)
-        # setup auth
         vault write auth/kubernetes/config \
           kubernetes_host="${api_server}" \
           token_reviewer_jwt="${token_review_jwt}" \
