@@ -103,12 +103,12 @@ tasks:
 
   token_lease:
     vars:
-      type: '{{ .type | default "batch" }}'
-      orphan: '{{ .orphan | default true }}'
+      type: '{{ .type | default "service" }}' # service|batch
+      orphan: '{{ .orphan | default false | ternary "-orphan" "" }}'
     cmds:
       - |
-          # if orphan is true set orphan variable to "-orphan"
-          if [[ "{{ .orphan }}" == "true" ]]; then
-            orphan="-orphan"
-          fi
-          vault token create -policy="list_pods" ${orphan} -type={{ .type }} | jq
+          vault token create \
+            -policy="list_pods" \
+            {{ .orphan }} \
+            -type={{ .type }} \
+            | jq
