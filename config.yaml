@@ -35,6 +35,11 @@ groups:
 cert:
   endpoint: cert
   default_lease_ttl: 60s
+  roles:
+    list_pods:
+      allowed_common_names:
+        - list-pods.svc
+      token_type: service
 
 kubernetes:
   cluster:

@@ -79,7 +79,7 @@ tasks:
         kubectl delete -n {{ .argocd_namespace }} -f ./appsets/vault_webhook_injector.yaml
         kubectl delete -n {{ .argocd_namespace }} -f ./appsets/vault_auth.yaml
 
-  auth_apply:
+  kube_auth_apply:
     cmds:
       - |
         {{ .set_config }}
