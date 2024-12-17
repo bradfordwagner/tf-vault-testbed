@@ -116,3 +116,55 @@ tasks:
           echo ${res} | jq
           echo ${res} | jq '.auth.client_token' -r > {{ .tmp_token_file }}
           bat -P {{ .tmp_token_file }}
+  vault_issue_ctx:
+    vars:
+      kubernetes_namespace: '{{ .kubernetes_namespace | default "vault" }}'
+      kubernetes_role: list-pods
+      use_cluster_role: true
+      cluster: kubernetes
+    env:
+      KUBECONFIG: "/tmp/{{ .cluster }}"
+      VAULT_FORMAT: json
+      approle_role: '{{ .approle_role }}'
+      cluster: '{{ .cluster }}'
+      kubernetes_namespace: '{{ .kubernetes_namespace }}'
+      kubernetes_role: '{{ .kubernetes_role }}'
+      use_cluster_role: '{{ .use_cluster_role }}'
+      kube_port: 6443
+
+      VAULT_TOKEN:
+        sh: 'cat {{ .tmp_token_file }}'
+    cmds:
+      # always clean up context upon completion
+      - defer: rm ${KUBECONFIG}
+      - |
+        vault token lookup | jq
+
+        # # set the namespace after root login
+        # export VAULT_NAMESPACE={{ .vault_namespace }}
+        export res=$(vault write kubernetes/creds/${kubernetes_role} \
+          kubernetes_namespace=${kubernetes_namespace} \
+          cluster_role_binding=${use_cluster_role}
+        )
+        user=$(echo ${res} | jq -r .data.service_account_name)
+        token=$(echo ${res} | jq -r .data.service_account_token)
+        echo ${res} | jq
+
+        cluster_config=$(vault read kubernetes/config)
+        ca_certificate=$(echo ${cluster_config} | jq -r .data.kubernetes_ca_cert | base64)
+        server=$(echo ${cluster_config} | jq -r .data.kubernetes_host)
+        server=https://0.0.0.0:${kube_port}
+        echo ${cluster_config} | jq
+
+        # # setup kube config
+        kubectl config set-context ${cluster} --cluster=${cluster}
+        kubectl config set-cluster ${cluster} --server=${server}
+        kubectl config set clusters.${cluster}.certificate-authority-data "${ca_certificate}"
+        kubectl config set-credentials user --token=${token}
+        kubectl config set-context ${cluster} --user=user
+        kubectl config use-context ${cluster}
+
+        # ## Test credentials
+        # # cluster scoped
+        kubecolor get ns
+        kubecolor get po -A

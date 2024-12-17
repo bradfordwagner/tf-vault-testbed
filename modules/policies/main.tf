@@ -21,8 +21,11 @@ EOT
 resource "vault_policy" "list_pods" {
   name   = "list_pods"
   policy = <<EOT
-path "kubernetes/creds/list_pods" {
+path "kubernetes/creds/list-pods" {
   capabilities = ["update"]
+}
+path "kubernetes/config" {
+  capabilities = ["read"]
 }
 EOT
 }

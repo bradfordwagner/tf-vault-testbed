@@ -45,8 +45,8 @@ kubernetes:
 
 secrets:
   kubernetes:
-    default_lease_ttl_seconds: 60
-    max_lease_ttl_seconds: 120
+    default_lease_ttl_seconds: 600
+    max_lease_ttl_seconds: 3600
     roles:
       list-pods:
         allowed_kubernetes_namespaces: ["*"]
