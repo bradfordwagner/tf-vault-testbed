@@ -17,6 +17,10 @@ vars:
     export KUBECONFIG={{ .vault_kubeconfig }}
   argocd_namespace: akp-gitops
   tmp_token_file: /tmp/vault_token
+  mounts: |
+    bob: auth/userpass/login/bob
+    kube_secrets: kubernetes/creds/list-pods
+    token: auth/token/create
 
 env:
   KUBECONFIG: '{{ .vault_kubeconfig }}'
@@ -168,3 +172,15 @@ tasks:
         # # cluster scoped
         kubecolor get ns
         kubecolor get po -A
+  list_leases:
+    vars:
+      mount: '{{ .mount | default "bob" }}'
+    env:
+      mount:
+        sh: echo '{{ .mounts }}' | yq -r .{{ .mount }}
+    cmds:
+      - vault list sys/leases/lookup | jq
+      - vault list sys/leases/lookup/${mount} | jq
+      - |
+        echo mount=${mount}, mount_key={{ .mount }}
+        vault list sys/leases/lookup/${mount} | jq '.[]' -r | xargs -I{} vault write sys/leases/lookup lease_id=${mount}/{} | jq
