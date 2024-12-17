@@ -18,11 +18,11 @@ vars:
   argocd_namespace: akp-gitops
   tmp_token_file: /tmp/vault_token
 
-  mount: kube
+  mount: u
   mounts: |
-    bob: auth/userpass/login/bob
-    kube: kubernetes/creds/list-pods
-    token: auth/token/create
+    u: auth/userpass/login/bob
+    k: kubernetes/creds/list-pods
+    t: auth/token/create
 
 env:
   KUBECONFIG: '{{ .vault_kubeconfig }}'
@@ -108,20 +108,33 @@ tasks:
           service_account_jwt="${token_review_jwt}" \
           disable_local_ca_jwt=true
 
-  token_lease:
+  userpass_login:
+    cmds:
+      -  |
+          pass=$(yq '.users.bob.password' ./config.yaml)
+          res=$(vault login -no-store -method=userpass username=bob password=${pass})
+          echo ${res} | jq
+          echo ${res} | jq '.auth.client_token' -r > {{ .tmp_token_file }}
+          bat -P {{ .tmp_token_file }}
+  token_login:
     vars:
       type: '{{ .type | default "service" }}' # service|batch
-      orphan: '{{ .orphan | default false | ternary "-orphan" "" }}'
+      orphan: '{{ .orphan | default "false" }}'
     cmds:
       - |
           res=$(vault token create \
             -policy="list_pods" \
-            {{ .orphan }} \
+            {{ if eq "true" .orphan }}-orphan{{ end }} \
             -type={{ .type }}
           )
           echo ${res} | jq
           echo ${res} | jq '.auth.client_token' -r > {{ .tmp_token_file }}
           bat -P {{ .tmp_token_file }}
+  token_lookup:
+    cmds:
+      - |
+          export VAULT_TOKEN=$(cat {{ .tmp_token_file }})
+          vault token lookup | jq
   vault_issue_ctx:
     vars:
       kubernetes_namespace: '{{ .kubernetes_namespace | default "vault" }}'
@@ -137,13 +150,11 @@ tasks:
       kubernetes_role: '{{ .kubernetes_role }}'
       use_cluster_role: '{{ .use_cluster_role }}'
       kube_port: 6443
-
-      VAULT_TOKEN:
-        sh: 'cat {{ .tmp_token_file }}'
     cmds:
       # always clean up context upon completion
       - defer: rm ${KUBECONFIG}
       - |
+        export VAULT_TOKEN=$(cat {{ .tmp_token_file }})
         vault token lookup | jq
 
         # # set the namespace after root login
@@ -176,23 +187,23 @@ tasks:
         kubecolor get po -A
   list_leases:
     vars:
-      mount: '{{ .mount }}'
+      m: '{{ .m | default .mount }}'
     env:
       mount:
-        sh: echo '{{ .mounts }}' | yq -r .{{ .mount }}
+        sh: echo '{{ .mounts }}' | yq -r .{{ .m }}
     cmds:
-      - echo key={{ .mount }},mount=${mount}
+      - echo m={{ .m }},mount=${mount}
       - vault list sys/leases/lookup | jq
       - vault list sys/leases/lookup/${mount} | jq
       - vault list sys/leases/lookup/${mount} | jq '.[]' -r | xargs -I{} vault write sys/leases/lookup lease_id=${mount}/{} | jq
   revoke_leases:
     vars:
-      mount: '{{ .mount }}'
+      m: '{{ .m | default .mount }}'
     env:
       mount:
-        sh: echo '{{ .mounts }}' | yq -r .{{ .mount }}
+        sh: echo '{{ .mounts }}' | yq -r .{{ .m }}
     cmds:
-      - echo key={{ .mount }},mount=${mount}
+      - echo m={{ .m }},mount=${mount}
       - vault list sys/leases/lookup | jq
       - vault list sys/leases/lookup/${mount} | jq
       - vault list sys/leases/lookup/${mount} | jq '.[]' -r | xargs -I{} vault write sys/leases/revoke lease_id=${mount}/{} | jq

@@ -13,8 +13,10 @@ entities:
 users:
   bob:
     password: barker
+    token_type: batch
   sir:
     password: smokesalot
+    token_type: service
 
 groups:
   admins:
@@ -23,6 +25,7 @@ groups:
       - bob
     policies:
       - ui
+      - list_pods
   chumps:
     type: internal
     policies:

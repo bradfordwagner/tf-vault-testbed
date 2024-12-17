@@ -5,7 +5,8 @@ resource "vault_generic_endpoint" "user" {
   # "policies": ["default"],
   data_json = <<EOT
 {
-  "password": "${each.value.password}"
+  "password": "${each.value.password}",
+  "token_type": "${each.value.token_type}"
 }
 EOT
 }
