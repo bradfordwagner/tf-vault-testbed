@@ -3,6 +3,14 @@ resource "vault_auth_backend" "userpass" {
   type = "userpass"
 }
 
+# cert auth
+resource "vault_auth_backend" "cert" {
+  path = "cert"
+  type = var.config.cert.endpoint
+  tune {
+    default_lease_ttl = var.config.cert.default_lease_ttl
+  }
+}
 
 # create kube auth backend
 resource "vault_auth_backend" "kubernetes_auth_endpoint" {

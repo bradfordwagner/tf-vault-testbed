@@ -32,6 +32,10 @@ groups:
       - default
     entity_names: []
 
+cert:
+  endpoint: cert
+  default_lease_ttl: 60s
+
 kubernetes:
   cluster:
     auth_endpoint: kubernetes
