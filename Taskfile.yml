@@ -17,9 +17,11 @@ vars:
     export KUBECONFIG={{ .vault_kubeconfig }}
   argocd_namespace: akp-gitops
   tmp_token_file: /tmp/vault_token
+
+  mount: kube
   mounts: |
     bob: auth/userpass/login/bob
-    kube_secrets: kubernetes/creds/list-pods
+    kube: kubernetes/creds/list-pods
     token: auth/token/create
 
 env:
@@ -174,13 +176,23 @@ tasks:
         kubecolor get po -A
   list_leases:
     vars:
-      mount: '{{ .mount | default "bob" }}'
+      mount: '{{ .mount }}'
     env:
       mount:
         sh: echo '{{ .mounts }}' | yq -r .{{ .mount }}
     cmds:
+      - echo key={{ .mount }},mount=${mount}
       - vault list sys/leases/lookup | jq
       - vault list sys/leases/lookup/${mount} | jq
-      - |
-        echo mount=${mount}, mount_key={{ .mount }}
-        vault list sys/leases/lookup/${mount} | jq '.[]' -r | xargs -I{} vault write sys/leases/lookup lease_id=${mount}/{} | jq
+      - vault list sys/leases/lookup/${mount} | jq '.[]' -r | xargs -I{} vault write sys/leases/lookup lease_id=${mount}/{} | jq
+  revoke_leases:
+    vars:
+      mount: '{{ .mount }}'
+    env:
+      mount:
+        sh: echo '{{ .mounts }}' | yq -r .{{ .mount }}
+    cmds:
+      - echo key={{ .mount }},mount=${mount}
+      - vault list sys/leases/lookup | jq
+      - vault list sys/leases/lookup/${mount} | jq
+      - vault list sys/leases/lookup/${mount} | jq '.[]' -r | xargs -I{} vault write sys/leases/revoke lease_id=${mount}/{} | jq
