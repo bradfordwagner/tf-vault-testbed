@@ -13,7 +13,7 @@ entities:
 users:
   bob:
     password: barker
-    token_type: batch
+    token_type: service
   sir:
     password: smokesalot
     token_type: service
