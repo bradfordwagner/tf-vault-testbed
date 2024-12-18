@@ -28,13 +28,6 @@ module "users" {
   entity_name_to_id  = module.entities.entity_name_to_id
 }
 
-# setup certificates
-module "certs" {
-  source             = "./modules/certs"
-  config             = local.config
-  cert_path = module.auth_backends.cert_path
-}
-
 module "groups" {
   source            = "./modules/groups"
   config            = local.config

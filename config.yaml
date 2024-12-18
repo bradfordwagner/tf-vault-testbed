@@ -35,10 +35,11 @@ groups:
 cert:
   endpoint: cert
   default_lease_ttl: 60s
+  # these will be configured in taskfiles rather than in main hydration
   roles:
     list_pods:
-      allowed_common_names:
-        - list-pods.svc
+      allowed_dns_sans: []
+        # - list-pods.svc
       token_type: service
 
 kubernetes:

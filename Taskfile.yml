@@ -15,8 +15,10 @@ vars:
   set_config: |
     export namespace={{ .vault_k8s_namespace }}
     export KUBECONFIG={{ .vault_kubeconfig }}
-  argocd_namespace: akp-gitops
   tmp_token_file: /tmp/vault_token
+
+  # these probably need to be edited
+  argocd_namespace: akp-gitops
 
   mount: u
   mounts: |
@@ -116,6 +118,43 @@ tasks:
           echo ${res} | jq
           echo ${res} | jq '.auth.client_token' -r > {{ .tmp_token_file }}
           bat -P {{ .tmp_token_file }}
+## todo after pki backend ######################################
+  cert_clean:
+    cmds:
+      - vault delete auth/cert/certs/list_pods
+  cert_login:
+    env:
+      CAROOT: '{{ .pem_cache_dir }}'
+    cmds:
+      - |
+          svc_name=list_pods.svc
+          cert_file=${CAROOT}/${svc_name}.cert.pem
+          key_file=${CAROOT}/${svc_name}.key.pem
+          # mkcert \
+          #   -client \
+          #   -cert-file ${cert_file} \
+          #   -key-file ${key_file} \
+          #   ${svc_name}
+
+
+          echo cert_file=${cert_file},key_file=${key_file}
+          vault login \
+            -method=cert \
+            -ca-cert ${CAROOT}/rootCA.pem \
+            -client-cert=${cert_file} \
+            -client-key=${key_file} \
+            -no-store \
+            -format=json \
+            name=list_pods \
+            | jq
+
+
+          # pass=$(yq '.users.bob.password' ./config.yaml)
+          # res=$(vault login -no-store -method=userpass username=bob password=${pass})
+          # echo ${res} | jq
+          # echo ${res} | jq '.auth.client_token' -r > {{ .tmp_token_file }}
+          # bat -P {{ .tmp_token_file }}
+################################################################
   token_login:
     vars:
       type: '{{ .type | default "service" }}' # service|batch
