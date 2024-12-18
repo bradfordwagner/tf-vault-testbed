@@ -38,3 +38,8 @@ module "kubernetes_secrets_backend" {
   source = "./modules/kubernetes_secrets_backend"
   config = local.config
 }
+
+module "pki_backend" {
+  source = "./modules/pki_backend"
+  config = local.config
+}

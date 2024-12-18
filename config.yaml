@@ -32,6 +32,16 @@ groups:
       - default
     entity_names: []
 
+pki_backend:
+  auth_endpoint: pki
+  default_lease_ttl_seconds: 600
+  max_lease_ttl_seconds: 3600
+  common_name: cluster.local
+  roles:
+    list_pods:
+      subdomains:
+        - list-pods
+
 cert:
   endpoint: cert
   default_lease_ttl: 60s

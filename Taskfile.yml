@@ -81,7 +81,7 @@ tasks:
         kubectl delete -n {{ .argocd_namespace }} -f ./appsets/vault_webhook_injector.yaml
         kubectl delete -n {{ .argocd_namespace }} -f ./appsets/vault_auth.yaml
 
-  kube_auth_apply:
+  init_kube_auth:
     cmds:
       - |
         {{ .set_config }}
@@ -119,6 +119,25 @@ tasks:
           echo ${res} | jq '.auth.client_token' -r > {{ .tmp_token_file }}
           bat -P {{ .tmp_token_file }}
 ## todo after pki backend ######################################
+  init_pki_backend:
+    cmds:
+      - |
+        common_name=$(yq -r '.pki_backend.common_name' ./config.yaml)
+        vault write pki/root/generate/internal \
+          common_name=${common_name} \
+          ttl=8760h # 1yr
+
+        vault write pki/config/urls \
+          issuing_certificates="${VAULT_ADDR}/v1/pki/ca" \
+          crl_distribution_points="${VAULT_ADDR}/v1/pki/crl"
+
+  issue_cert:
+    cmds:
+      - |
+        vault write pki/issue/list_pods \
+          common_name=list-pods.cluster.local \
+          | jq
+
   cert_clean:
     cmds:
       - vault delete auth/cert/certs/list_pods
