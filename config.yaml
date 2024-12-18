@@ -39,8 +39,7 @@ pki_backend:
   common_name: cluster.local
   roles:
     list_pods:
-      subdomains:
-        - list-pods
+      identity: list-pods
 
 cert:
   endpoint: cert

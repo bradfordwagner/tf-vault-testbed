@@ -132,10 +132,15 @@ tasks:
           crl_distribution_points="${VAULT_ADDR}/v1/pki/crl"
 
   issue_cert:
+    vars:
+      role: '{{ .role | default "list_pods"  }}'
     cmds:
       - |
-        vault write pki/issue/list_pods \
-          common_name=list-pods.cluster.local \
+        identity=$(yq -r '.pki_backend.roles.{{ .role }}.identity' ./config.yaml)
+        domain=$(yq -r '.pki_backend.common_name' ./config.yaml)
+        common_name=${identity}.${domain}
+        vault write pki/issue/{{ .role }} \
+          common_name=${common_name} \
           | jq
 
   cert_clean:

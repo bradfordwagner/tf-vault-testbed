@@ -15,9 +15,7 @@ resource "vault_pki_secret_backend_role" "roles" {
   for_each = var.config.pki_backend.roles
   backend  = vault_mount.pki.path
   name     = each.key
-
-  # lets map over the values of allowed_domains to create a list
-  allowed_domains    = [for service in each.value.subdomains : "${service}.${var.config.pki_backend.common_name}"]
+  allowed_domains    = ["${each.value.identity}.${var.config.pki_backend.common_name}"]
   allow_subdomains   = false
   allow_bare_domains = true
   no_store           = true
