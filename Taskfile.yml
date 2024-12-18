@@ -20,11 +20,12 @@ vars:
   # these probably need to be edited
   argocd_namespace: akp-gitops
 
-  mount: u
+  mount: c
   mounts: |
     u: auth/userpass/login/bob
     k: kubernetes/creds/list-pods
     t: auth/token/create
+    c: auth/cert/login
 
 env:
   KUBECONFIG: '{{ .vault_kubeconfig }}'
@@ -130,54 +131,59 @@ tasks:
         vault write pki/config/urls \
           issuing_certificates="${VAULT_ADDR}/v1/pki/ca" \
           crl_distribution_points="${VAULT_ADDR}/v1/pki/crl"
-
   issue_cert:
     vars:
       role: '{{ .role | default "list_pods"  }}'
-    cmds:
-      - |
-        identity=$(yq -r '.pki_backend.roles.{{ .role }}.identity' ./config.yaml)
-        domain=$(yq -r '.pki_backend.common_name' ./config.yaml)
-        common_name=${identity}.${domain}
-        vault write pki/issue/{{ .role }} \
-          common_name=${common_name} \
-          | jq
-
-  cert_clean:
-    cmds:
-      - vault delete auth/cert/certs/list_pods
-  cert_login:
     env:
-      CAROOT: '{{ .pem_cache_dir }}'
+      cert_file: '/tmp/{{ .role }}.cert.pem'
+      key_file: '/tmp/{{ .role }}.key.pem'
+      ca_file: '/tmp/{{ .role }}.ca.pem'
     cmds:
       - |
-          svc_name=list_pods.svc
-          cert_file=${CAROOT}/${svc_name}.cert.pem
-          key_file=${CAROOT}/${svc_name}.key.pem
-          # mkcert \
-          #   -client \
-          #   -cert-file ${cert_file} \
-          #   -key-file ${key_file} \
-          #   ${svc_name}
+          identity=$(yq -r '.pki_backend.roles.{{ .role }}.identity' ./config.yaml)
+          domain=$(yq -r '.pki_backend.common_name' ./config.yaml)
+          common_name=${identity}.${domain}
+          res=$(vault write pki/issue/{{ .role }} \
+            common_name=${common_name}
+          )
+          echo ${res} | jq
+          echo ${res} | jq '.data.certificate' -r > ${cert_file}
+          echo ${res} | jq '.data.private_key' -r > ${key_file}
+          echo ${res} | jq '.data.issuing_ca' -r > ${ca_file}
 
+          bat -P ${cert_file} ${key_file} ${ca_file}
 
-          echo cert_file=${cert_file},key_file=${key_file}
-          vault login \
+          # setup auth role
+          token_type=$(yq -r '.cert.roles.{{ .role }}.token_type' ./config.yaml)
+          policies=$(yq -r '.cert.roles.{{ .role }}.policies' ./config.yaml)
+          vault write auth/cert/certs/${identity} \
+            display_name=${identity} \
+            certificate=@${cert_file} \
+            policies=${policies} \
+            token_type=${token_type}
+
+          echo jobs done
+  cert_login:
+    vars:
+      role: '{{ .role | default "list_pods"  }}'
+    env:
+      cert_file: '/tmp/{{ .role }}.cert.pem'
+      key_file: '/tmp/{{ .role }}.key.pem'
+      ca_file: '/tmp/{{ .role }}.ca.pem'
+    cmds:
+      - |
+          identity=$(yq -r '.pki_backend.roles.{{ .role }}.identity' ./config.yaml)
+          res=$(vault login \
             -method=cert \
-            -ca-cert ${CAROOT}/rootCA.pem \
             -client-cert=${cert_file} \
             -client-key=${key_file} \
             -no-store \
             -format=json \
-            name=list_pods \
-            | jq
-
-
-          # pass=$(yq '.users.bob.password' ./config.yaml)
-          # res=$(vault login -no-store -method=userpass username=bob password=${pass})
-          # echo ${res} | jq
-          # echo ${res} | jq '.auth.client_token' -r > {{ .tmp_token_file }}
-          # bat -P {{ .tmp_token_file }}
+            name=${identity} \
+          )
+          echo ${res} | jq
+          echo ${res} | jq '.auth.client_token' -r > {{ .tmp_token_file }}
+          bat -P {{ .tmp_token_file }}
 ################################################################
   token_login:
     vars:
@@ -257,6 +263,7 @@ tasks:
     cmds:
       - echo m={{ .m }},mount=${mount}
       - vault list sys/leases/lookup | jq
+      - vault list sys/leases/lookup/auth | jq
       - vault list sys/leases/lookup/${mount} | jq
       - vault list sys/leases/lookup/${mount} | jq '.[]' -r | xargs -I{} vault write sys/leases/lookup lease_id=${mount}/{} | jq
   revoke_leases:

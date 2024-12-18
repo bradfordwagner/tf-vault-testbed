@@ -34,8 +34,8 @@ groups:
 
 pki_backend:
   auth_endpoint: pki
-  default_lease_ttl_seconds: 600
-  max_lease_ttl_seconds: 3600
+  default_lease_ttl_seconds: 600 # 10m
+  max_lease_ttl_seconds: 31536000 # 1year
   common_name: cluster.local
   roles:
     list_pods:
@@ -43,13 +43,13 @@ pki_backend:
 
 cert:
   endpoint: cert
-  default_lease_ttl: 60s
+  default_lease_ttl: 10m
   # these will be configured in taskfiles rather than in main hydration
   roles:
     list_pods:
-      allowed_dns_sans: []
-        # - list-pods.svc
-      token_type: service
+      token_type: batch
+      # this is a string
+      policies: list_pods
 
 kubernetes:
   cluster:
