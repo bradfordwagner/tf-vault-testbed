@@ -48,7 +48,7 @@ cert:
   roles:
     list_pods:
       token_type: batch
-      # this is a string
+      # this is a comma separated string
       policies: list_pods
 
 kubernetes:
